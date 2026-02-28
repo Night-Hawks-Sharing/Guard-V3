@@ -1,10 +1,16 @@
+const { migrateFromEnv } = require('./utils/whitelistManager');
+
+// Load safe users from .env first, then migrate to JSON
+const envSafeUsers = process.env.SAFE_USERS?.split(',').filter(Boolean) || [];
+const safeUsers = migrateFromEnv(envSafeUsers);
+
 module.exports = {
     token: process.env.TOKEN,
     clientId: process.env.CLIENT_ID,
     guildId: process.env.GUILD_ID,
     ownerId: process.env.OWNER_ID,
     adminRoles: process.env.ADMIN_ROLES?.split(',').filter(Boolean) || [],
-    safeUsers: process.env.SAFE_USERS?.split(',').filter(Boolean) || [],
+    safeUsers: safeUsers,
     guardEnabled: process.env.GUARD_ENABLED === 'true',
     logChannelId: process.env.LOG_CHANNEL_ID,
     limits: {

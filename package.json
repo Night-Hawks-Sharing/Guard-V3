@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node index.js"
+    "test": "node index.js",
+    "deploy": "node deploy-commands.js"
   },
   "keywords": ["discord", "guard", "bot", "security"],
   "author": "",

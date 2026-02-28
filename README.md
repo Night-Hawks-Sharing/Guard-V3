@@ -34,6 +34,10 @@ GUARD_ENABLED=true
 
 ### 3️⃣ Botu Başlat
 ```bash
+# Önce komutları Discord'a yükle
+npm run deploy
+
+# Sonra botu başlat
 npm start
 ```
 
@@ -184,8 +188,15 @@ discord-guard-v3/
 │   └── guard/         # 12 koruma event'i
 ├── handlers/          # Komut ve event yükleyiciler
 ├── utils/             # Yardımcı fonksiyonlar
+│   ├── guardUtils.js
+│   ├── whitelistManager.js  # Whitelist JSON yönetimi
+│   ├── advancedLogger.js
+│   └── htmlGenerator.js
+├── data/              # Kalıcı veriler (gitignore'da)
+│   └── whitelist.json # Whitelist kullanıcıları
 ├── config.js          # Yapılandırma
-└── index.js           # Ana dosya
+├── index.js           # Ana dosya
+└── deploy-commands.js # Komut deploy sistemi
 ```
 
 ---
@@ -314,6 +325,98 @@ npm start
 
 ---
 
+## ⚠️ Bilinen Sorunlar ve Çözümler
+
+### ✅ Whitelist Sistemi Sorunu (ÇÖZÜLDÜ)
+
+**Sorun**: `/whitelist ekle` komutu ile eklenen kullanıcılar bot yeniden başlatıldığında kayboluyor.
+
+**Neden**: Whitelist verileri sadece bellekte tutuluyor (client.config.safeUsers). Bot yeniden başladığında .env dosyasından tekrar yükleniyor ve değişiklikler kayboluyor.
+
+**Çözüm**: ✅ Whitelist verileri artık `data/whitelist.json` dosyasında kalıcı olarak saklanıyor.
+
+#### Yeni Sistem Özellikleri:
+- ✅ Kalıcı veri saklama (JSON dosyası)
+- ✅ Bot yeniden başlatıldığında veriler korunur
+- ✅ .env'deki SAFE_USERS ilk başlatmada JSON'a aktarılır
+- ✅ Hata durumlarında güvenli çalışma
+- ✅ Aynı kullanıcı birden fazla eklenemez
+- ✅ Otomatik data/ klasörü oluşturma
+
+#### Nasıl Çalışır:
+1. Bot ilk kez başlatıldığında `.env`'deki `SAFE_USERS` verileri `data/whitelist.json`'a aktarılır
+2. `/whitelist ekle` komutu hem bellekte hem JSON dosyasında güncelleme yapar
+3. Bot yeniden başlatıldığında JSON dosyasından veriler yüklenir
+4. Artık whitelist değişiklikleri kalıcıdır!
+
+---
+
+## 🚀 Deploy Commands Sistemi (EKLENDİ)
+
+**Sorun**: Slash komutlar Discord'a manuel olarak yüklenmiyor, bazen görünmüyor.
+
+**Çözüm**: ✅ Otomatik komut deploy sistemi eklendi.
+
+### Kullanım:
+
+```bash
+# Tüm komutları Discord'a yükle
+node deploy-commands.js
+
+# Veya npm script ile
+npm run deploy
+```
+
+### Özellikler:
+- ✅ Tüm komutları otomatik tarar
+- ✅ Discord API'ye yükler
+- ✅ Global veya guild-specific deploy
+- ✅ Hata yönetimi
+- ✅ Başarı/hata mesajları
+
+### deploy-commands.js Dosyası:
+```javascript
+const { REST, Routes } = require('discord.js');
+const fs = require('fs');
+require('dotenv').config();
+
+const commands = [];
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    commands.push(command.data.toJSON());
+}
+
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+
+(async () => {
+    try {
+        console.log(`${commands.length} komut yükleniyor...`);
+        
+        // Guild-specific deploy (hızlı test için)
+        await rest.put(
+            Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+            { body: commands }
+        );
+        
+        console.log('✅ Komutlar başarıyla yüklendi!');
+    } catch (error) {
+        console.error('❌ Hata:', error);
+    }
+})();
+```
+
+### package.json'a ekle:
+```json
+"scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js"
+}
+```
+
+---
+
 ## 📞 Destek
 
 Sorun yaşıyorsan:
@@ -335,10 +438,12 @@ MIT License
 Guard V3 botun artık çalışıyor ve sunucunu koruyor! 🛡️
 
 **İlk adımlar:**
-1. `/guard durum` ile sistemi kontrol et
-2. `/whitelist ekle @yönetici` ile güvenilir yöneticileri ekle
-3. `/koruma liste` ile tüm korumaları gör
-4. Test için bir kanal oluştur/sil (limit aşmadan)
-5. Log kanalını kontrol et
+1. `npm run deploy` ile komutları Discord'a yükle
+2. `npm start` ile botu başlat
+3. `/guard durum` ile sistemi kontrol et
+4. `/whitelist ekle @yönetici` ile güvenilir yöneticileri ekle
+5. `/koruma liste` ile tüm korumaları gör
+6. Test için bir kanal oluştur/sil (limit aşmadan)
+7. Log kanalını kontrol et
 
 **Herhangi bir sorun olursa konsol loglarına bak!**

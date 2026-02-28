@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { addUser, removeUser } = require('../utils/whitelistManager');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -47,14 +48,17 @@ module.exports = {
         if (subcommand === 'ekle') {
             const user = interaction.options.getUser('kullanıcı');
             
-            if (client.config.safeUsers.includes(user.id)) {
+            const result = addUser(user.id, client.config.safeUsers);
+            
+            if (!result.success) {
                 return interaction.reply({
                     content: `⚠️ ${user.tag} zaten güvenli listede!`,
                     ephemeral: true
                 });
             }
             
-            client.config.safeUsers.push(user.id);
+            // Update in-memory config
+            client.config.safeUsers = result.list;
             
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
